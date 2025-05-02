@@ -8,13 +8,14 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-22.04  # Use a specific Ubuntu version
     strategy:
       matrix:
-        python-version: [3.10.17]
+        python-version: ['3.10.17']  # Use a specific Python version
 
     steps:
     - uses: actions/checkout@v3
+    
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v4
       with:
@@ -55,7 +56,7 @@ jobs:
   build-and-push:
     needs: test
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     
     steps:
     - uses: actions/checkout@v3
@@ -81,7 +82,7 @@ jobs:
   deploy-staging:
     needs: build-and-push
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     environment: staging
     
     steps:
@@ -114,7 +115,7 @@ jobs:
   deploy-production:
     needs: deploy-staging
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     environment: production
     
     steps:
@@ -147,7 +148,7 @@ jobs:
   slack-notification:
     needs: [deploy-production]
     if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     
     steps:
     - name: Send notification

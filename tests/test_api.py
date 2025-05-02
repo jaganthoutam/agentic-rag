@@ -11,7 +11,7 @@ from fastapi.testclient import TestClient
 
 from api import app, QueryRequest, QueryResponse
 from app import AgenticRag
-from core import RagOutput
+from core import RagOutput, AgentType
 
 
 class TestAPI(unittest.TestCase):

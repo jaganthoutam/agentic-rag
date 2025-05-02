@@ -29,7 +29,7 @@ app = FastAPI(
 )
 
 # Initialize the RAG system
-rag = None
+rag = None  # Will be properly initialized in startup_event
 
 
 class QueryRequest(BaseModel):
