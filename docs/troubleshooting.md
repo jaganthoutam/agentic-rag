@@ -576,7 +576,7 @@ engine = sqlalchemy.create_engine(
 
 If you've tried these solutions and still have issues:
 
-1. Check the [GitHub Issues](https://github.com/yourusername/agentic-rag/issues) for similar problems
+1. Check the [GitHub Issues](https://github.com/jaganthoutam/agentic-rag/issues) for similar problems
 2. Review the documentation again for any missed steps
 3. Post your question on [Stack Overflow](https://stackoverflow.com/) with the 'agentic-rag' tag
 4. Create a new issue on GitHub with detailed information about your problem

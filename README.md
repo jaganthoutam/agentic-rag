@@ -46,7 +46,7 @@ Agentic RAG consists of several key components:
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/agentic-rag.git
+git clone https://github.com/jaganthoutam/agentic-rag.git
 cd agentic-rag
 
 # Create and activate a virtual environment (recommended)
@@ -61,7 +61,7 @@ pip install -r requirements.txt
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/agentic-rag.git
+git clone https://github.com/jaganthoutam/agentic-rag.git
 cd agentic-rag
 
 # Build the Docker image
