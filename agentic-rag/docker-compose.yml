@@ -1,0 +1,108 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    container_name: agentic-rag
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./config.json:/app/config.json
+      - ./data:/app/data
+      - ./logs:/app/logs
+    environment:
+      - PYTHONUNBUFFERED=1
+      - AGENTIC_RAG_CONFIG=/app/config.json
+      - SEARCH_API_KEY=${SEARCH_API_KEY}
+      - AWS_ACCESS_KEY=${AWS_ACCESS_KEY}
+      - AWS_SECRET_KEY=${AWS_SECRET_KEY}
+      - CLAUDE_API_KEY=${CLAUDE_API_KEY}
+    depends_on:
+      - db
+    networks:
+      - agentic-rag-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  db:
+    image: postgres:15
+    container_name: agentic-rag-db
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=agentic-rag
+      - POSTGRES_PASSWORD=postgres-password
+      - POSTGRES_DB=memory_db
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - agentic-rag-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agentic-rag"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: agentic-rag-pgadmin
+    ports:
+      - "5050:80"
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@example.com
+      - PGADMIN_DEFAULT_PASSWORD=pgadmin-password
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+    networks:
+      - agentic-rag-network
+    restart: unless-stopped
+    depends_on:
+      - db
+
+  prometheus:
+    image: prom/prometheus
+    container_name: agentic-rag-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    networks:
+      - agentic-rag-network
+    restart: unless-stopped
+    depends_on:
+      - app
+
+  grafana:
+    image: grafana/grafana
+    container_name: agentic-rag-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=grafana-password
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards
+    networks:
+      - agentic-rag-network
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+
+networks:
+  agentic-rag-network:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  pgadmin-data:
+  prometheus-data:
+  grafana-data:

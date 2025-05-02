@@ -1,0 +1,80 @@
+{
+  "version": "1.0.0",
+  "app": {
+    "name": "agentic-rag",
+    "environment": "development",
+    "debug": true
+  },
+  "logging": {
+    "level": "info",
+    "format": "json",
+    "output": "console",
+    "file_path": "logs/agentic-rag.log"
+  },
+  "api": {
+    "host": "0.0.0.0",
+    "port": 8000,
+    "timeout": 30,
+    "cors_origins": ["*"]
+  },
+  "memory": {
+    "short_term": {
+      "enabled": true,
+      "capacity": 1000,
+      "ttl": 3600
+    },
+    "long_term": {
+      "enabled": true,
+      "connection_string": "postgresql://user:password@localhost:5432/memory_db",
+      "table_name": "long_term_memory"
+    }
+  },
+  "planning": {
+    "react": {
+      "enabled": true,
+      "max_steps": 10,
+      "timeout": 60
+    },
+    "cot": {
+      "enabled": true,
+      "max_depth": 5
+    }
+  },
+  "agents": {
+    "aggregator": {
+      "enabled": true,
+      "timeout": 30,
+      "max_agents": 5
+    },
+    "search": {
+      "enabled": true,
+      "engine": "kogi",
+      "api_key": "${SEARCH_API_KEY}",
+      "max_results": 10
+    },
+    "local_data": {
+      "enabled": true,
+      "data_path": "./data",
+      "formats": ["csv", "json", "pdf"]
+    },
+    "cloud": {
+      "enabled": true,
+      "provider": "aws",
+      "region": "us-west-2",
+      "credentials": {
+        "access_key": "${AWS_ACCESS_KEY}",
+        "secret_key": "${AWS_SECRET_KEY}"
+      }
+    },
+    "generative": {
+      "enabled": true,
+      "model": "claude-3-opus-20240229",
+      "api_key": "${CLAUDE_API_KEY}",
+      "max_tokens": 4000,
+      "temperature": 0.7
+    },
+    "memory_agent": {
+      "enabled": true
+    }
+  }
+}

@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect x="0" y="0" width="800" height="600" fill="#f8f9fa" />
+  
+  <!-- Title -->
+  <text x="400" y="40" font-family="Arial, sans-serif" font-size="24" font-weight="bold" text-anchor="middle" fill="#333">Agentic RAG System Architecture</text>
+  
+  <!-- User -->
+  <rect x="50" y="100" width="100" height="80" rx="5" ry="5" fill="#4472c4" />
+  <text x="100" y="145" font-family="Arial, sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="white">User</text>
+  
+  <!-- API -->
+  <rect x="250" y="100" width="100" height="80" rx="5" ry="5" fill="#70ad47" />
+  <text x="300" y="145" font-family="Arial, sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="white">API</text>
+  
+  <!-- Core -->
+  <rect x="350" y="100" width="100" height="80" rx="5" ry="5" fill="#a5a5a5" />
+  <text x="400" y="145" font-family="Arial, sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="white">Core</text>
+  
+  <!-- App -->
+  <rect x="450" y="100" width="100" height="80" rx="5" ry="5" fill="#ed7d31" />
+  <text x="500" y="145" font-family="Arial, sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="white">App</text>
+  
+  <!-- Memory Components -->
+  <rect x="50" y="250" width="300" height="130" rx="5" ry="5" fill="#ffd966" stroke="#d9a300" stroke-width="2" />
+  <text x="200" y="275" font-family="Arial, sans-serif" font-size="18" font-weight="bold" text-anchor="middle" fill="#333">Memory</text>
+  
+  <!-- Short-term Memory -->
+  <rect x="70" y="290" width="120" height="70" rx="5" ry="5" fill="#fff2cc" stroke="#d9a300" stroke-width="1" />
+  <text x="130" y="330" font-family="Arial, sans-serif" font-size="14" text-anchor="middle" fill="#333">Short-term</text>
+  
+  <!-- Long-term Memory -->
+  <rect x="210" y="290" width="120" height="70" rx="5" ry="5" fill="#fff2cc" stroke="#d9a300" stroke-width="1" />
+  <text x="270" y="330" font-family="Arial, sans-serif" font-size="14" text-anchor="middle" fill="#333">Long-term</text>
+  
+  <!-- Planning Components -->
+  <rect x="450" y="250" width="300" height="130" rx="5" ry="5" fill="#5b9bd5" stroke="#4472c4" stroke-width="2" />
+  <text x="600" y="275" font-family="Arial, sans-serif" font-size="18" font-weight="bold" text-anchor="middle" fill="white">Planning</text>
+  
+  <!-- ReAct Planner -->
+  <rect x="470" y="290" width="120" height="70" rx="5" ry="5" fill="#deeaf6" stroke="#4472c4" stroke-width="1" />
+  <text x="530" y="330" font-family="Arial, sans-serif" font-size="14" text-anchor="middle" fill="#333">ReAct</text>
+  
+  <!-- Chain of Thought Planner -->
+  <rect x="610" y="290" width="120" height="70" rx="5" ry="5" fill="#deeaf6" stroke="#4472c4" stroke-width="1" />
+  <text x="670" y="330" font-family="Arial, sans-serif" font-size="14" text-anchor="middle" fill="#333">Chain of Thought</text>
+  
+  <!-- Agent Components -->
+  <rect x="50" y="430" width="700" height="130" rx="5" ry="5" fill="#ed7d31" stroke="#c55a11" stroke-width="2" />
+  <text x="400" y="455" font-family="Arial, sans-serif" font-size="18" font-weight="bold" text-anchor="middle" fill="white">Agents</text>
+  
+  <!-- Aggregator Agent -->
+  <rect x="70" y="470" width="100" height="70" rx="5" ry="5" fill="#fbe5d6" stroke="#c55a11" stroke-width="1" />
+  <text x="120" y="510" font-family="Arial, sans-serif" font-size="14" text-anchor="middle" fill="#333">Aggregator</text>
+  
+  <!-- Search Agent -->
+  <rect x="190" y="470" width="100" height="70" rx="5" ry="5" fill="#fbe5d6" stroke="#c55a11" stroke-width="1" />
+  <text x="240" y="510" font-family="Arial, sans-serif" font-size="14" text-anchor="middle" fill="#333">Search</text>
+  
+  <!-- Local Data Agent -->
+  <rect x="310" y="470" width="100" height="70" rx="5" ry="5" fill="#fbe5d6" stroke="#c55a11" stroke-width="1" />
+  <text x="360" y="510" font-family="Arial, sans-serif" font-size="14" text-anchor="middle" fill="#333">Local Data</text>
+  
+  <!-- Cloud Agent -->
+  <rect x="430" y="470" width="100" height="70" rx="5" ry="5" fill="#fbe5d6" stroke="#c55a11" stroke-width="1" />
+  <text x="480" y="510" font-family="Arial, sans-serif" font-size="14" text-anchor="middle" fill="#333">Cloud</text>
+  
+  <!-- Generative Agent -->
+  <rect x="550" y="470" width="100" height="70" rx="5" ry="5" fill="#fbe5d6" stroke="#c55a11" stroke-width="1" />
+  <text x="600" y="510" font-family="Arial, sans-serif" font-size="14" text-anchor="middle" fill="#333">Generative</text>
+  
+  <!-- Memory Agent -->
+  <rect x="670" y="470" width="60" height="70" rx="5" ry="5" fill="#fbe5d6" stroke="#c55a11" stroke-width="1" />
+  <text x="700" y="510" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#333">Memory</text>
+  
+  <!-- External Data Sources -->
+  <rect x="600" y="100" width="150" height="80" rx="5" ry="5" fill="#7030a0" />
+  <text x="675" y="145" font-family="Arial, sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="white">External Data</text>
+  
+  <!-- Arrows -->
+  <!-- User to API -->
+  <line x1="150" y1="140" x2="250" y2="140" stroke="#333" stroke-width="2" />
+  <polygon points="250,140 240,135 240,145" fill="#333" />
+  
+  <!-- API to Core -->
+  <line x1="350" y1="140" x2="350" y2="140" stroke="#333" stroke-width="2" />
+  <polygon points="350,140 340,135 340,145" fill="#333" />
+  
+  <!-- Core to App -->
+  <line x1="450" y1="140" x2="450" y2="140" stroke="#333" stroke-width="2" />
+  <polygon points="450,140 440,135 440,145" fill="#333" />
+  
+  <!-- App to External Data -->
+  <line x1="550" y1="140" x2="600" y2="140" stroke="#333" stroke-width="2" />
+  <polygon points="600,140 590,135 590,145" fill="#333" />
+  
+  <!-- App to Memory -->
+  <line x1="500" y1="180" x2="200" y2="250" stroke="#333" stroke-width="2" />
+  <polygon points="200,250 204,240 210,247" fill="#333" />
+  
+  <!-- App to Planning -->
+  <line x1="500" y1="180" x2="600" y2="250" stroke="#333" stroke-width="2" />
+  <polygon points="600,250 596,240 590,247" fill="#333" />
+  
+  <!-- Memory to Agents -->
+  <line x1="200" y1="380" x2="200" y2="430" stroke="#333" stroke-width="2" />
+  <polygon points="200,430 195,420 205,420" fill="#333" />
+  
+  <!-- Planning to Agents -->
+  <line x1="600" y1="380" x2="600" y2="430" stroke="#333" stroke-width="2" />
+  <polygon points="600,430 595,420 605,420" fill="#333" />
+  
+  <!-- Agents to App -->
+  <line x1="400" y1="430" x2="500" y2="180" stroke="#333" stroke-width="2" />
+  <polygon points="500,180 497,190 490,185" fill="#333" />
+</svg>

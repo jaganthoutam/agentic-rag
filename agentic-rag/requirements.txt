@@ -1,0 +1,27 @@
+# Core dependencies
+pydantic>=2.0.0
+sqlalchemy>=2.0.0
+fastapi>=0.100.0
+uvicorn>=0.23.0
+
+# Cloud providers
+boto3>=1.28.0
+azure-storage-blob>=12.16.0
+google-cloud-storage>=2.10.0
+
+# Data processing
+pandas>=2.0.0
+numpy>=1.24.0
+python-dotenv>=1.0.0
+
+# Document processing
+pypdf>=3.15.0
+python-docx>=0.8.11
+openpyxl>=3.1.0
+
+# Utilities
+requests>=2.31.0
+python-dateutil>=2.8.2
+pytz>=2023.3
+psycopg2-binary>=2.9.6  # For PostgreSQL
+aiofiles>=23.1.0
