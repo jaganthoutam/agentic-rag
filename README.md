@@ -174,10 +174,6 @@ class MyCustomAgent(BaseAgent):
 
 For more extension possibilities, see the [Developer Guide](docs/developer_guide.md).
 
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
 ## Acknowledgements
 
 - Inspired by research on Retrieval-Augmented Generation
