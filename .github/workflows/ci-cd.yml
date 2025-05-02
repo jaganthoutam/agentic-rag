@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-22.04  # Use a specific Ubuntu version
     strategy:
       matrix:
-        python-version: ['3.10.17']  # Use a specific Python version
+        python-version: ['3.13.1']  # Use a specific Python version
 
     steps:
     - uses: actions/checkout@v3
