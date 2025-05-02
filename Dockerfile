@@ -1,4 +1,4 @@
-FROM python:3.10-slim
+FROM python:3.13-slim
 
 WORKDIR /app
 
@@ -9,9 +9,7 @@ RUN apt-get update && \
         curl \
         git \
         libpq-dev \
-        poppler-utils \  # For PDF processing
-        && \
-    apt-get clean && \
+        poppler-utils && \
     rm -rf /var/lib/apt/lists/*
 
 # Copy requirements file
@@ -23,14 +21,13 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY . .
 
-# Create data directory
-RUN mkdir -p data
-RUN mkdir -p logs
+# Create data & logs directories
+RUN mkdir -p data logs
 
 # Environment variables
-ENV PYTHONUNBUFFERED=1
-ENV PYTHONPATH=/app
-ENV AGENTIC_RAG_CONFIG=/app/config.json
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app \
+    AGENTIC_RAG_CONFIG=/app/config.json
 
 # Expose API port
 EXPOSE 8000
