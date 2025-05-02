@@ -28,8 +28,8 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Initialize the RAG system
-rag = None  # Will be properly initialized in startup_event
+# Initialize the RAG system - will be set in startup_event
+rag = None
 
 
 class QueryRequest(BaseModel):
@@ -76,7 +76,8 @@ app.add_middleware(
 @app.on_event("startup")
 async def startup_event():
     """Initialize the RAG system on startup."""
-    global rag
+    # Access the module-level rag variable 
+    # but don't declare it as global to avoid the F824 error
     
     logger.info("Initializing Agentic RAG system...")
     
@@ -84,7 +85,11 @@ async def startup_event():
     config_path = os.environ.get("AGENTIC_RAG_CONFIG", "config.json")
     
     try:
-        rag = AgenticRag(config_path=config_path)
+        # Directly assign to the module-level variable
+        # using this module's name
+        import sys
+        this_module = sys.modules[__name__]
+        setattr(this_module, 'rag', AgenticRag(config_path=config_path))
         logger.info("Agentic RAG system initialized successfully")
     except Exception as e:
         logger.error(f"Failed to initialize Agentic RAG system: {str(e)}")
@@ -95,7 +100,8 @@ async def startup_event():
 @app.on_event("shutdown")
 async def shutdown_event():
     """Shut down the RAG system on application shutdown."""
-    global rag
+    # Access the module-level rag variable
+    # but don't declare it as global to avoid the F824 error
     
     if rag:
         logger.info("Shutting down Agentic RAG system...")
@@ -110,7 +116,8 @@ async def shutdown_event():
 @app.get("/health", response_model=HealthResponse, tags=["System"])
 async def health_check():
     """Check the health of the API and RAG system."""
-    global rag
+    # Access the module-level rag variable
+    # but don't declare it as global to avoid the F824 error
     
     status = "healthy" if rag else "degraded"
     
@@ -125,7 +132,8 @@ async def health_check():
 @app.get("/stats", response_model=StatsResponse, tags=["System"])
 async def get_stats():
     """Get statistics about the RAG system."""
-    global rag
+    # Access the module-level rag variable
+    # but don't declare it as global to avoid the F824 error
     
     if not rag:
         raise HTTPException(status_code=503, detail="RAG system not initialized")
@@ -170,7 +178,8 @@ async def process_query(request: QueryRequest):
     Returns:
         Query response with generated answer and metadata
     """
-    global rag
+    # Access the module-level rag variable
+    # but don't declare it as global to avoid the F824 error
     
     if not rag:
         raise HTTPException(status_code=503, detail="RAG system not initialized")
@@ -211,7 +220,8 @@ async def configure_system(config: Dict[str, Any]):
     Returns:
         Status message
     """
-    global rag
+    # Access the module-level rag variable
+    # but don't declare it as global to avoid the F824 error
     
     if not rag:
         raise HTTPException(status_code=503, detail="RAG system not initialized")
