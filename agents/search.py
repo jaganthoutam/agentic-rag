@@ -22,7 +22,7 @@ class SearchAgent(BaseAgent):
     This agent searches external sources for information.
     """
     
-    def __init__(self, engine: str = "kogi", api_key: str = "", max_results: int = 10) -> None:
+    def __init__(self, engine: str = "kagi", api_key: str = "", max_results: int = 10) -> None:
         """
         Initialize the search agent.
         
@@ -103,15 +103,15 @@ class SearchAgent(BaseAgent):
         # In a real implementation, this would call the actual search API
         self.logger.debug(f"Searching for: {query_text} using {self.engine}")
         
-        if self.engine == "kogi":
-            return self._kogi_search(query_text)
+        if self.engine == "kagi":
+            return self._kagi_search(query_text)
         else:
             # Generic mock search
             return self._mock_search(query_text)
     
-    def _kogi_search(self, query_text: str) -> Dict[str, Any]:
+    def _kagi_search(self, query_text: str) -> Dict[str, Any]:
         """
-        Perform a search using the Kogi search engine.
+        Perform a search using the kagi search engine.
         
         Args:
             query_text: Text to search for
@@ -119,9 +119,9 @@ class SearchAgent(BaseAgent):
         Returns:
             Search results as a dictionary
         """
-        # In a real implementation, this would call the Kogi API
+        # In a real implementation, this would call the kagi API
         try:
-            # Mock API call to Kogi
+            # Mock API call to kagi
             time.sleep(0.5)  # Simulate network delay
             
             # Simulate a response
@@ -149,11 +149,11 @@ class SearchAgent(BaseAgent):
                 "meta": {
                     "total_results": 1240,
                     "query_time_ms": 156,
-                    "engine": "kogi"
+                    "engine": "kagi"
                 }
             }
         except Exception as e:
-            self.logger.error(f"Error in Kogi search: {str(e)}")
+            self.logger.error(f"Error in kagi search: {str(e)}")
             raise
     
     def _mock_search(self, query_text: str) -> Dict[str, Any]:

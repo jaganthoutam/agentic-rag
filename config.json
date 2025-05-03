@@ -25,7 +25,7 @@
     },
     "long_term": {
       "enabled": true,
-      "connection_string": "postgresql://user:password@localhost:5432/memory_db",
+      "connection_string": "postgresql://agentic-rag:postgres-password@db:5432/agentic-rag",
       "table_name": "long_term_memory"
     }
   },
@@ -48,7 +48,7 @@
     },
     "search": {
       "enabled": true,
-      "engine": "kogi",
+      "engine": "kagi",
       "api_key": "${SEARCH_API_KEY}",
       "max_results": 10
     },

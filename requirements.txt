@@ -4,6 +4,10 @@ sqlalchemy>=2.0.0
 fastapi>=0.100.0
 uvicorn>=0.23.0
 
+# Monitoring
+prometheus-client>=0.15.0
+starlette-prometheus>=0.9.0
+
 # Cloud providers
 boto3>=1.28.0
 azure-storage-blob>=12.16.0

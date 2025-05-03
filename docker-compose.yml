@@ -37,9 +37,10 @@ services:
     environment:
       - POSTGRES_USER=agentic-rag
       - POSTGRES_PASSWORD=postgres-password
-      - POSTGRES_DB=memory_db
+      - POSTGRES_DB=agentic-rag  # Changed from memory_db to match the expected database name
     volumes:
       - postgres-data:/var/lib/postgresql/data
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
     networks:
       - agentic-rag-network
     restart: unless-stopped
