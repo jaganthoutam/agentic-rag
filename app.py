@@ -174,12 +174,13 @@ class AgenticRag:
         
         if self.agents_config["generative"]["enabled"]:
             self.agents[AgentType.GENERATIVE] = GenerativeAgent(
+                provider=self.agents_config["generative"].get("provider", "openai"),
                 model=self.agents_config["generative"]["model"],
                 api_key=self.agents_config["generative"]["api_key"],
                 max_tokens=self.agents_config["generative"].get("max_tokens", 4000),
                 temperature=self.agents_config["generative"].get("temperature", 0.7)
             )
-            self.logger.info("Generative agent initialized")
+            self.logger.info(f"Generative agent initialized with provider={self.agents_config['generative'].get('provider', 'openai')}")
         
         if self.agents_config["memory_agent"]["enabled"]:
             self.agents[AgentType.MEMORY] = MemoryAgent(

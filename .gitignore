@@ -1,1 +1,22 @@
+# ignore env files
 .env
+# ignore venv folder
+venv/
+# ignore pycache
+__pycache__/
+# ignore Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+# ignore all .pyc files
+*.pyc
+# ignore all .pyo files
+*.pyo
+# ignore all .pyd files
+*.pyd
+# ignore all .db files
+*.db
+# ignore all .sqlite files
+*.sqlite
+# ignore all .log files
+*.log
+# ignore all .tsv files
+*.tsv
