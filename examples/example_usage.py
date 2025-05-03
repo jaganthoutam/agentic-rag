@@ -65,6 +65,40 @@ def process_query(rag, query_text):
     print(f"\nTotal execution time: {total_time:.2f}s")
 
 
+def test_search_agent():
+    """Test the search agent with Kagi API."""
+    # Import the search agent
+    from agents.search import SearchAgent
+    from core import Query
+    
+    # Get API key from environment
+    api_key = os.environ.get("SEARCH_API_KEY")
+    if not api_key:
+        print("WARNING: SEARCH_API_KEY environment variable not set")
+        print("Using mock search instead")
+    
+    # Create a search agent
+    search_agent = SearchAgent(
+        engine="kagi",
+        api_key=api_key,
+        max_results=5
+    )
+    
+    # Create a test query
+    query = Query(text="What is retrieval-augmented generation?")
+    
+    # Process the query
+    print("Testing search agent...")
+    result = search_agent.process(query)
+    
+    # Print results
+    print(f"\nSearch results (confidence: {result.confidence:.2f}):")
+    for i, doc in enumerate(result.documents):
+        print(f"\n[{i+1}] {doc.metadata.get('title', 'No title')}")
+        print(f"URL: {doc.source}")
+        print(doc.content[:200] + "..." if len(doc.content) > 200 else doc.content)
+
+
 def run_example_queries(config_path):
     """
     Run example queries through the Agentic RAG system.
@@ -92,13 +126,19 @@ def run_example_queries(config_path):
         
         # Interactive mode
         print("Enter 'quit' or 'exit' to end the session.")
+        print("Enter 'test-search' to test the search agent directly.")
+        
         while True:
-            user_query = input("\nEnter your query: ")
+            user_input = input("\nEnter your query: ")
             
-            if user_query.lower() in ['quit', 'exit']:
+            if user_input.lower() in ['quit', 'exit']:
                 break
             
-            process_query(rag, user_query)
+            if user_input.lower() == 'test-search':
+                test_search_agent()
+                continue
+            
+            process_query(rag, user_input)
     
     finally:
         # Clean up
@@ -111,6 +151,10 @@ if __name__ == "__main__":
     
     parser = argparse.ArgumentParser(description="Agentic RAG Example")
     parser.add_argument("--config", default="../config.json", help="Path to configuration file")
+    parser.add_argument("--test-search", action="store_true", help="Test search agent directly")
     args = parser.parse_args()
     
-    run_example_queries(args.config)
+    if args.test_search:
+        test_search_agent()
+    else:
+        run_example_queries(args.config)

@@ -1,13 +1,15 @@
 """
 Generative agent implementation for Agentic RAG.
 
-This module implements an agent that generates human-like responses using a language model.
+This module implements an agent that generates human-like responses using OpenAI or Groq models.
 """
 
 import json
 import time
 import uuid
-from typing import Dict, List, Optional, Union, Any
+import logging
+import requests
+from typing import Dict, List, Optional, Union, Any, Literal
 
 from core import AgentType, Query, Document, AgentResult
 from agents.base import BaseAgent
@@ -17,12 +19,13 @@ class GenerativeAgent(BaseAgent):
     """
     Generative agent implementation.
     
-    This agent generates human-like responses using a language model.
+    This agent generates human-like responses using OpenAI or Groq language models.
     """
     
     def __init__(
         self, 
-        model: str = "claude-3-opus-20240229", 
+        provider: Literal["openai", "groq"] = "groq",
+        model: str = "llama3-70b-8192", 
         api_key: str = "", 
         max_tokens: int = 4000,
         temperature: float = 0.7
@@ -31,18 +34,20 @@ class GenerativeAgent(BaseAgent):
         Initialize the generative agent.
         
         Args:
+            provider: The LLM provider ("openai" or "groq")
             model: Name of the language model to use
             api_key: API key for the language model service
             max_tokens: Maximum number of tokens in generated responses
             temperature: Temperature parameter for generation (0.0-1.0)
         """
         super().__init__(agent_type=AgentType.GENERATIVE)
+        self.provider = provider
         self.model = model
         self.api_key = api_key
         self.max_tokens = max_tokens
         self.temperature = temperature
         self.logger.info(
-            f"Generative agent initialized with model={model}, "
+            f"Generative agent initialized with provider={provider}, model={model}, "
             f"max_tokens={max_tokens}, temperature={temperature}"
         )
     
@@ -70,8 +75,9 @@ class GenerativeAgent(BaseAgent):
             # Create document
             document = Document(
                 content=generated_text,
-                source=f"generative_agent:{self.model}",
+                source=f"generative_agent:{self.provider}:{self.model}",
                 metadata={
+                    "provider": self.provider,
                     "model": self.model,
                     "query": query.text,
                     "temperature": self.temperature,
@@ -87,6 +93,7 @@ class GenerativeAgent(BaseAgent):
                 confidence=0.7,  # Moderate confidence for generation without context
                 processing_time=0.0,  # Will be set by decorator
                 metadata={
+                    "provider": self.provider,
                     "model": self.model,
                     "temperature": self.temperature,
                     "generation_type": "direct_query"
@@ -104,6 +111,7 @@ class GenerativeAgent(BaseAgent):
                 processing_time=0.0,  # Will be set by decorator
                 metadata={
                     "error": str(e),
+                    "provider": self.provider,
                     "model": self.model
                 }
             )
@@ -145,8 +153,9 @@ class GenerativeAgent(BaseAgent):
             # Create document
             document = Document(
                 content=generated_text,
-                source=f"generative_agent:{self.model}",
+                source=f"generative_agent:{self.provider}:{self.model}",
                 metadata={
+                    "provider": self.provider,
                     "model": self.model,
                     "query": query.text,
                     "temperature": self.temperature,
@@ -164,6 +173,7 @@ class GenerativeAgent(BaseAgent):
                 confidence=0.9,  # Higher confidence for generation with context
                 processing_time=0.0,  # Will be set by decorator
                 metadata={
+                    "provider": self.provider,
                     "model": self.model,
                     "temperature": self.temperature,
                     "context_count": len(context_docs),
@@ -182,6 +192,7 @@ class GenerativeAgent(BaseAgent):
                 processing_time=0.0,  # Will be set by decorator
                 metadata={
                     "error": str(e),
+                    "provider": self.provider,
                     "model": self.model
                 }
             )
@@ -203,14 +214,9 @@ class GenerativeAgent(BaseAgent):
         Returns:
             Generated response text
         """
-        # In a real implementation, this would call the language model API
-        # For now, create a mock response
-        self.logger.debug(f"Generating response with model: {self.model}")
+        self.logger.debug(f"Generating response with {self.provider}/{self.model}")
         
         try:
-            # Simulate API call delay
-            time.sleep(1.5)
-            
             # Prepare context for prompt
             context_str = ""
             if context_docs:
@@ -220,30 +226,176 @@ class GenerativeAgent(BaseAgent):
                     content = doc.content[:500] + "..." if len(doc.content) > 500 else doc.content
                     context_str += f"[{i+1}] {source}\n{content}\n\n"
             
-            # Create a mock response based on the query and context
-            if not context_docs:
-                # Direct query response
-                response = f"Based on my knowledge, {query_text} involves several important aspects. "
-                response += "First, it's essential to understand the core concepts. "
-                response += "Additionally, there are multiple perspectives to consider. "
-                response += "I hope this helps answer your query."
+            # Call the appropriate API based on provider
+            if self.provider == "openai":
+                return self._call_openai_api(system_prompt, query_text, context_str)
+            elif self.provider == "groq":
+                return self._call_groq_api(system_prompt, query_text, context_str)
             else:
-                # Context-based response
-                response = f"Based on the provided information, {query_text} can be addressed as follows. "
-                
-                # Reference some of the context
-                if len(context_docs) >= 1:
-                    response += f"According to the first source, {context_docs[0].content[:50]}... "
-                
-                if len(context_docs) >= 2:
-                    response += f"The second source adds that {context_docs[1].content[:50]}... "
-                
-                response += "Taking all sources into account, I recommend considering multiple factors. "
-                response += "Let me know if you'd like more specific information on any aspect."
-            
-            self.logger.debug(f"Generated response of length {len(response)}")
-            return response
+                raise ValueError(f"Unsupported provider: {self.provider}")
             
         except Exception as e:
             self.logger.error(f"Error generating response: {str(e)}")
             raise
+    
+    def _call_openai_api(self, system_prompt: str, query_text: str, context_str: str) -> str:
+        """
+        Call the OpenAI API to generate a response.
+        
+        Args:
+            system_prompt: System prompt for the model
+            query_text: The query text
+            context_str: Context information
+            
+        Returns:
+            Generated response text
+        """
+        if not self.api_key:
+            self.logger.warning("OpenAI API key not set, using mock response")
+            return self._generate_mock_response(query_text, context_str != "")
+        
+        try:
+            import openai
+            client = openai.OpenAI(api_key=self.api_key)
+            
+            messages = [
+                {"role": "system", "content": system_prompt}
+            ]
+            
+            # Add context if available
+            if context_str:
+                messages.append({"role": "user", "content": f"Here is context information:\n\n{context_str}"})
+            
+            # Add user query
+            messages.append({"role": "user", "content": query_text})
+            
+            response = client.chat.completions.create(
+                model=self.model,
+                messages=messages,
+                max_tokens=self.max_tokens,
+                temperature=self.temperature
+            )
+            
+            return response.choices[0].message.content
+            
+        except ImportError:
+            self.logger.error("OpenAI package not installed. Install with: pip install openai")
+            return self._generate_mock_response(query_text, context_str != "")
+        except Exception as e:
+            self.logger.error(f"Error calling OpenAI API: {str(e)}")
+            return self._generate_mock_response(query_text, context_str != "")
+    
+    def _call_groq_api(self, system_prompt: str, query_text: str, context_str: str) -> str:
+        """
+        Call the Groq API to generate a response.
+        
+        Args:
+            system_prompt: System prompt for the model
+            query_text: The query text
+            context_str: Context information
+            
+        Returns:
+            Generated response text
+        """
+        if not self.api_key:
+            self.logger.warning("Groq API key not set, using mock response")
+            return self._generate_mock_response(query_text, context_str != "")
+        
+        try:
+            import groq
+            client = groq.Groq(api_key=self.api_key)
+            
+            messages = [
+                {"role": "system", "content": system_prompt}
+            ]
+            
+            # Add context if available
+            if context_str:
+                messages.append({"role": "user", "content": f"Here is context information:\n\n{context_str}"})
+            
+            # Add user query
+            messages.append({"role": "user", "content": query_text})
+            
+            response = client.chat.completions.create(
+                model=self.model,
+                messages=messages,
+                max_tokens=self.max_tokens,
+                temperature=self.temperature
+            )
+            
+            return response.choices[0].message.content
+            
+        except ImportError:
+            self.logger.error("Groq package not installed. Install with: pip install groq")
+            return self._generate_mock_response(query_text, context_str != "")
+        except Exception as e:
+            self.logger.error(f"Error calling Groq API: {str(e)}")
+            return self._generate_mock_response(query_text, context_str != "")
+    
+    def _call_api_directly(self, provider: str, model: str, messages: List[Dict[str, str]]) -> str:
+        """
+        Call the API directly using requests when the package is not available.
+        
+        Args:
+            provider: The provider name ("openai" or "groq")
+            model: The model name
+            messages: The messages to send
+            
+        Returns:
+            Generated response text
+        """
+        try:
+            base_url = "https://api.openai.com/v1" if provider == "openai" else "https://api.groq.com/openai/v1"
+            
+            response = requests.post(
+                f"{base_url}/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {self.api_key}",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "model": model,
+                    "messages": messages,
+                    "max_tokens": self.max_tokens,
+                    "temperature": self.temperature
+                },
+                timeout=30
+            )
+            
+            response.raise_for_status()
+            return response.json()["choices"][0]["message"]["content"]
+            
+        except Exception as e:
+            self.logger.error(f"Error calling {provider} API directly: {str(e)}")
+            return self._generate_mock_response(messages[-1]["content"], len(messages) > 2)
+    
+    def _generate_mock_response(self, query_text: str, has_context: bool) -> str:
+        """
+        Generate a mock response when the API call fails.
+        
+        Args:
+            query_text: The query text
+            has_context: Whether context is available
+            
+        Returns:
+            Generated mock response text
+        """
+        self.logger.debug("Generating mock response")
+        
+        # Simulate API call delay
+        time.sleep(0.5)
+        
+        if not has_context:
+            # Direct query response
+            response = f"Based on my knowledge, {query_text} involves several important aspects. "
+            response += "First, it's essential to understand the core concepts. "
+            response += "Additionally, there are multiple perspectives to consider. "
+            response += "I hope this helps answer your query."
+        else:
+            # Context-based response
+            response = f"Based on the provided information, {query_text} can be addressed as follows. "
+            response += "The context suggests several important considerations. "
+            response += "Taking all sources into account, I recommend considering multiple factors. "
+            response += "Let me know if you'd like more specific information on any aspect."
+        
+        return response

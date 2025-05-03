@@ -179,7 +179,7 @@ The `agents` section configures agent components:
   },
   "search": {
     "enabled": true,
-    "engine": "kogi",
+    "engine": "kagi",
     "api_key": "${SEARCH_API_KEY}",
     "max_results": 10
   },
@@ -223,7 +223,7 @@ The `agents` section configures agent components:
 | Field | Type | Description | Default |
 |-------|------|-------------|---------|
 | `enabled` | boolean | Enable search agent | `true` |
-| `engine` | string | Search engine to use | `"kogi"` |
+| `engine` | string | Search engine to use | `"kagi"` |
 | `api_key` | string | API key for the search engine | `""` |
 | `max_results` | number | Maximum number of results to return | `10` |
 

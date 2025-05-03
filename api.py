@@ -13,6 +13,7 @@ import uvicorn
 from fastapi import FastAPI, HTTPException, Query, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+from starlette.responses import Response
 
 from core import Query as RagQuery
 from app import AgenticRag
@@ -91,6 +92,7 @@ async def startup_event():
         this_module = sys.modules[__name__]
         setattr(this_module, 'rag', AgenticRag(config_path=config_path))
         logger.info("Agentic RAG system initialized successfully")
+        
     except Exception as e:
         logger.error(f"Failed to initialize Agentic RAG system: {str(e)}")
         # Continue anyway, but API calls will fail until fixed
@@ -110,6 +112,56 @@ async def shutdown_event():
             logger.info("Agentic RAG system shut down successfully")
         except Exception as e:
             logger.error(f"Error shutting down Agentic RAG system: {str(e)}")
+
+
+# Metrics endpoint for Prometheus - simplified version
+@app.get('/metrics')
+async def metrics():
+    """Expose Prometheus metrics."""
+    # Create a simple metrics response
+    metrics_output = []
+    
+    # System info
+    metrics_output.append("# HELP agentic_rag_info System information")
+    metrics_output.append("# TYPE agentic_rag_info gauge")
+    metrics_output.append('agentic_rag_info{version="1.0.0",app_name="agentic-rag"} 1')
+    
+    # Query counter
+    metrics_output.append("# HELP agentic_rag_queries_total Total number of processed queries")
+    metrics_output.append("# TYPE agentic_rag_queries_total counter")
+    metrics_output.append("agentic_rag_queries_total 0")
+    
+    if rag:
+        try:
+            # Memory metrics
+            metrics_output.append("# HELP agentic_rag_memory_entries Number of memory entries")
+            metrics_output.append("# TYPE agentic_rag_memory_entries gauge")
+            
+            for memory_name, memory in rag.memories.items():
+                stats = memory.get_stats()
+                entries = stats.get('total_entries', 0) or stats.get('memory_entries', 0)
+                metrics_output.append(f'agentic_rag_memory_entries{{memory_type="{memory_name}"}} {entries}')
+                
+                if memory_name == 'short_term':
+                    capacity_used = stats.get('capacity_used_percent', 0)
+                    metrics_output.append("# HELP agentic_rag_memory_capacity_used_percent Percentage of memory capacity used")
+                    metrics_output.append("# TYPE agentic_rag_memory_capacity_used_percent gauge")
+                    metrics_output.append(f"agentic_rag_memory_capacity_used_percent {capacity_used}")
+            
+            # Document count
+            doc_count = 0
+            for memory_name, memory in rag.memories.items():
+                stats = memory.get_stats()
+                doc_count += stats.get('document_count', 0) or stats.get('documents', 0)
+            
+            metrics_output.append("# HELP agentic_rag_documents_total Total number of documents stored")
+            metrics_output.append("# TYPE agentic_rag_documents_total gauge")
+            metrics_output.append(f"agentic_rag_documents_total {doc_count}")
+            
+        except Exception as e:
+            logger.error(f"Error collecting metrics: {e}")
+    
+    return Response("\n".join(metrics_output), media_type="text/plain")
 
 
 # Health check endpoint
@@ -183,6 +235,9 @@ async def process_query(request: QueryRequest):
     
     if not rag:
         raise HTTPException(status_code=503, detail="RAG system not initialized")
+    
+    # Start timing
+    start_time = time.time()
     
     try:
         # Create a query object
