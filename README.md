@@ -21,7 +21,7 @@ Agentic RAG consists of several key components:
   - Generative: Produces human-like responses using language models
   - Memory: Retrieves information from memory components
 
-![Architecture Diagram](docs/architecture.svg)
+![Architecture Diagram](docs/AgenticAIArchitecture.png)
 
 ## Features
 
