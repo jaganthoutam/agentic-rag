@@ -243,7 +243,8 @@ class ReActPlanner(BasePlanner):
         # Check for keywords that suggest local data access is needed
         local_data_keywords = {
             "local", "file", "document", "internal", "our", "company",
-            "dataset", "database", "data", "report", "analysis"
+            "dataset", "database", "data", "report", "analysis",
+            "pdf", "document", "text", "content", "information in", "what does", "what is in"
         }
         
         query_lower = query_text.lower()
@@ -251,6 +252,16 @@ class ReActPlanner(BasePlanner):
         # Check if any local data keyword is in the query
         for keyword in local_data_keywords:
             if keyword in query_lower:
+                return True
+        
+        # Check for PDF-specific patterns
+        pdf_patterns = [
+            "what does the pdf", "what is in the pdf", "what does the document",
+            "what is in the document", "what does it say", "what is said"
+        ]
+        
+        for pattern in pdf_patterns:
+            if pattern in query_lower:
                 return True
         
         return False

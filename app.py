@@ -8,7 +8,18 @@ coordinating the workflow between different components.
 import json
 import logging
 import time
+import os
 from typing import Dict, List, Optional, Union
+
+# Try to load environment variables from .env file
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+    print("Loaded environment variables from .env file")
+except ImportError:
+    print("python-dotenv not installed. Install with: pip install python-dotenv")
+except Exception as e:
+    print(f"Error loading .env file: {str(e)}")
 
 from core import AgentType, Query, Plan, RagOutput
 from memory.base import BaseMemory
@@ -208,57 +219,77 @@ class AgenticRag:
             if AgentType.MEMORY in self.agents:
                 self.logger.debug(f"Checking memory for query: {query.id}")
                 memory_result = self.agents[AgentType.MEMORY].process(query)
+                self.logger.info(f"Memory agent result: {memory_result.confidence if memory_result else 'None'}")
             
-            # If memory doesn't have a good match, create a plan
+            # Check if we have a high-confidence memory result
+            if memory_result and memory_result.confidence >= 0.8:
+                self.logger.info(f"Using high-confidence memory result for query: {query.id}")
+                # Build the output directly from memory result
+                processing_time = time.time() - start_time
+                output = RagOutput(
+                    query_id=query.id,
+                    response=memory_result.documents[0].content if memory_result and memory_result.documents else "Unable to generate response",
+                    documents=memory_result.documents if memory_result else [],
+                    plan_id=None,
+                    processing_time=processing_time,
+                    confidence=memory_result.confidence if memory_result else 0.0,
+                    metadata={
+                        "memory_hit": True,
+                        "agent_counts": {}  # No agents used when using memory directly
+                    }
+                )
+                
+                self.logger.info(f"Query processed successfully using memory: {query.id} in {processing_time:.2f}s")
+                return output
+            
+            # Create and execute a plan if no high-confidence memory match
             plan = None
-            if not memory_result or memory_result.confidence < 0.8:
-                # Choose planner - default to ReAct if available
-                planner = self.planners.get("react", next(iter(self.planners.values())))
-                self.logger.debug(f"Creating plan for query: {query.id} using {planner.__class__.__name__}")
-                plan = planner.create_plan(query, self.agents)
-                
-                # Execute the plan
-                self.logger.debug(f"Executing plan: {plan.id}")
-                plan.start_execution()
-                results = []
-                
-                for step in plan.steps:
-                    if step.agent_type in self.agents:
-                        step.start()
-                        try:
-                            self.logger.debug(f"Executing step: {step.id} with agent: {step.agent_type.value}")
-                            result = self.agents[step.agent_type].process(query)
-                            step.complete(result)
-                            results.append(result)
-                        except Exception as e:
-                            self.logger.error(f"Error executing step {step.id}: {str(e)}")
-                            step.fail()
-                    else:
-                        self.logger.warning(f"Agent not available for step: {step.agent_type.value}")
+            # Choose planner - default to ReAct if available
+            planner = self.planners.get("react", next(iter(self.planners.values())))
+            self.logger.debug(f"Creating plan for query: {query.id} using {planner.__class__.__name__}")
+            plan = planner.create_plan(query, self.agents)
+            
+            # Execute the plan
+            self.logger.debug(f"Executing plan: {plan.id}")
+            plan.start_execution()
+            results = []
+            
+            for step in plan.steps:
+                if step.agent_type in self.agents:
+                    step.start()
+                    try:
+                        self.logger.debug(f"Executing step: {step.id} with agent: {step.agent_type.value}")
+                        result = self.agents[step.agent_type].process(query)
+                        step.complete(result)
+                        results.append(result)
+                        self.logger.info(f"Step {step.id} completed with confidence: {result.confidence}")
+                    except Exception as e:
+                        self.logger.error(f"Error executing step {step.id}: {str(e)}")
                         step.fail()
-                
-                if all(step.status == "completed" for step in plan.steps):
-                    plan.complete()
                 else:
-                    plan.fail()
-                
-                # Use aggregator to combine results
-                if AgentType.AGGREGATOR in self.agents and results:
-                    self.logger.debug(f"Aggregating results for query: {query.id}")
-                    aggregated_result = self.agents[AgentType.AGGREGATOR].aggregate(query, results)
-                else:
-                    # Fallback if no aggregator
-                    self.logger.warning("No aggregator agent available, using best individual result")
-                    aggregated_result = max(results, key=lambda r: r.confidence) if results else None
+                    self.logger.warning(f"Agent not available for step: {step.agent_type.value}")
+                    step.fail()
+            
+            if all(step.status == "completed" for step in plan.steps):
+                plan.complete()
             else:
-                # Use memory result directly
-                self.logger.info(f"Using memory result for query: {query.id}")
-                aggregated_result = memory_result
+                plan.fail()
+            
+            # Use aggregator to combine results
+            if AgentType.AGGREGATOR in self.agents and results:
+                self.logger.debug(f"Aggregating results for query: {query.id}")
+                aggregated_result = self.agents[AgentType.AGGREGATOR].aggregate(query, results)
+                self.logger.info(f"Aggregator result confidence: {aggregated_result.confidence}")
+            else:
+                # Fallback if no aggregator
+                self.logger.warning("No aggregator agent available, using best individual result")
+                aggregated_result = max(results, key=lambda r: r.confidence) if results else None
             
             # Generate final response using the generative agent
             if AgentType.GENERATIVE in self.agents and aggregated_result:
                 self.logger.debug(f"Generating final response for query: {query.id}")
                 final_result = self.agents[AgentType.GENERATIVE].generate_response(query, aggregated_result)
+                self.logger.info(f"Generative agent result confidence: {final_result.confidence}")
             else:
                 self.logger.warning("No generative agent available, using aggregated result")
                 final_result = aggregated_result
@@ -273,7 +304,7 @@ class AgenticRag:
                 processing_time=processing_time,
                 confidence=final_result.confidence if final_result else 0.0,
                 metadata={
-                    "memory_hit": memory_result is not None and memory_result.confidence >= 0.8,
+                    "memory_hit": False,
                     "agent_counts": {agent_type.value: len([s for s in plan.steps if s.agent_type == agent_type]) for agent_type in AgentType if plan}
                 }
             )

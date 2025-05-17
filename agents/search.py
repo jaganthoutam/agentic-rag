@@ -20,12 +20,12 @@ class SearchAgent(BaseAgent):
     """
     Search agent implementation.
     
-    This agent searches external sources for information using the Kagi Search API.
+    This agent searches external sources for information.
     """
     
     def __init__(
         self, 
-        engine: str = "kagi", 
+        engine: str = "mock", 
         api_key: str = "", 
         max_results: int = 10
     ) -> None:
@@ -33,7 +33,7 @@ class SearchAgent(BaseAgent):
         Initialize the search agent.
         
         Args:
-            engine: Search engine to use (kagi)
+            engine: Search engine to use (mock)
             api_key: API key for the search engine
             max_results: Maximum number of results to return
         """
@@ -44,7 +44,7 @@ class SearchAgent(BaseAgent):
         self.logger.info(f"Search agent initialized with engine={engine}, max_results={max_results}")
         
         # Validate API key
-        if not self.api_key:
+        if not self.api_key and engine != "mock":
             self.logger.warning("No API key provided for search agent")
     
     @BaseAgent.measure_execution_time
@@ -112,61 +112,8 @@ class SearchAgent(BaseAgent):
         """
         self.logger.debug(f"Searching for: {query_text} using {self.engine}")
         
-        if self.engine == "kagi":
-            return self._kagi_search(query_text)
-        else:
-            # Generic mock search
-            return self._mock_search(query_text)
-    
-    def _kagi_search(self, query_text: str) -> Dict[str, Any]:
-        """
-        Perform a search using the Kagi search API.
-        
-        Args:
-            query_text: Text to search for
-            
-        Returns:
-            Search results as a dictionary
-        """
-        self.logger.debug(f"Performing Kagi search for: {query_text}")
-        
-        if not self.api_key:
-            raise ValueError("Kagi API key is required for search")
-        
-        try:
-            # Kagi Search API endpoint
-            url = "https://kagi.com/api/v0/search"
-            
-            # Request headers
-            headers = {
-                "Authorization": f"Bot {self.api_key}",
-                "Content-Type": "application/json"
-            }
-            
-            # Request payload
-            data = {
-                "query": query_text,
-                "limit": self.max_results
-            }
-            
-            # Send request
-            response = requests.post(url, headers=headers, json=data)
-            
-            # Check response status
-            response.raise_for_status()
-            
-            # Parse response
-            search_results = response.json()
-            
-            # Log search stats
-            self.logger.debug(f"Kagi search completed in {search_results.get('meta', {}).get('ms', 0)}ms")
-            
-            return search_results
-        except requests.exceptions.RequestException as e:
-            self.logger.error(f"Error in Kagi search API: {str(e)}")
-            if hasattr(e, "response") and e.response:
-                self.logger.error(f"Response status: {e.response.status_code}, Response body: {e.response.text}")
-            raise
+        # Always use mock search for now
+        return self._mock_search(query_text)
     
     def _mock_search(self, query_text: str) -> Dict[str, Any]:
         """
@@ -200,11 +147,7 @@ class SearchAgent(BaseAgent):
                     "rank": 2,
                     "url": f"https://example.com/mock2_{uuid.uuid4()}",
                     "title": f"Mock Result 2 for {query_text}",
-                    "snippet": f"Another mock result for {query_text}. This is just for testing."
-                },
-                {
-                    "t": 1,  # Result type 1 = related searches
-                    "list": [f"{query_text} example", f"{query_text} tutorial", f"{query_text} documentation"]
+                    "snippet": f"Another mock result for {query_text}. This is just for testing purposes."
                 }
             ]
         }
@@ -221,7 +164,7 @@ class SearchAgent(BaseAgent):
         """
         documents = []
         
-        # Extract results from Kagi response
+        # Extract results from response
         results = search_results.get("data", [])
         
         for result in results:
@@ -251,53 +194,31 @@ class SearchAgent(BaseAgent):
                 )
                 
                 documents.append(document)
-            
-            elif result.get("t") == 1:  # Related searches
-                # Create a document for related searches
-                related_searches = result.get("list", [])
-                
-                if related_searches:
-                    content = "Related searches:\n" + "\n".join(f"- {item}" for item in related_searches)
-                    
-                    document = Document(
-                        content=content,
-                        source="kagi_related_searches",
-                        metadata={
-                            "type": "related_searches",
-                            "engine": self.engine,
-                            "relevance": 0.5  # Medium relevance
-                        }
-                    )
-                    
-                    documents.append(document)
         
         return documents
     
     def _calculate_confidence(self, documents: List[Document]) -> float:
         """
-        Calculate a confidence score based on search results.
+        Calculate confidence score based on search results.
         
         Args:
-            documents: Search result documents
+            documents: List of search result documents
             
         Returns:
-            Confidence score between 0 and 1
+            Confidence score (0.0-1.0)
         """
         if not documents:
             return 0.0
         
-        # Calculate based on average relevance and result count
-        avg_relevance = sum(
-            doc.metadata.get("relevance", 0.5) for doc in documents
-        ) / len(documents)
+        # Simple confidence calculation based on number of results
+        # and their relevance scores
+        total_relevance = sum(doc.metadata.get("relevance", 0.5) for doc in documents)
+        avg_relevance = total_relevance / len(documents)
         
-        # Scale by result count (more results = higher confidence, up to a point)
-        count_factor = min(len(documents) / self.max_results, 1.0)
+        # Scale by number of results (up to a point)
+        result_factor = min(len(documents) / 5, 1.0)
         
-        # Combine factors
-        confidence = avg_relevance * 0.7 + count_factor * 0.3
-        
-        return confidence
+        return avg_relevance * result_factor
 
 
 class KagiAPIError(Exception):

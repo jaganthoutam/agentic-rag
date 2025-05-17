@@ -10,12 +10,15 @@ import logging
 import os
 import sys
 import time
+from dotenv import load_dotenv
 
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from core import Query
 from app import AgenticRag
+
+load_dotenv()  # This loads the .env file to access keys like GROQ_API_KEY
 
 
 def setup_logging():
@@ -66,32 +69,25 @@ def process_query(rag, query_text):
 
 
 def test_search_agent():
-    """Test the search agent with Kagi API."""
-    # Import the search agent
+    """Test the search agent without Kagi API."""
     from agents.search import SearchAgent
     from core import Query
     
-    # Get API key from environment
-    api_key = os.environ.get("SEARCH_API_KEY")
+    api_key = os.environ.get("GROQ_API_KEY")
     if not api_key:
-        print("WARNING: SEARCH_API_KEY environment variable not set")
+        print("WARNING: GROQ_API_KEY environment variable not set")
         print("Using mock search instead")
     
-    # Create a search agent
     search_agent = SearchAgent(
-        engine="kagi",
         api_key=api_key,
         max_results=5
     )
     
-    # Create a test query
     query = Query(text="What is retrieval-augmented generation?")
     
-    # Process the query
     print("Testing search agent...")
     result = search_agent.process(query)
     
-    # Print results
     print(f"\nSearch results (confidence: {result.confidence:.2f}):")
     for i, doc in enumerate(result.documents):
         print(f"\n[{i+1}] {doc.metadata.get('title', 'No title')}")

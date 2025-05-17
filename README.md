@@ -33,6 +33,7 @@ Agentic RAG consists of several key components:
 - **Docker Support**: Easy deployment with Docker
 - **Comprehensive Logging**: Detailed logs for debugging and monitoring
 - **Configuration Management**: Flexible configuration via JSON files and environment variables
+- **PDF Processing**: Extract and query information from PDF documents
 
 ## Installation
 
@@ -70,6 +71,40 @@ docker build -t agentic-rag .
 # Run the container
 docker run -p 8000:8000 -v $(pwd)/config.json:/app/config.json agentic-rag
 ```
+
+## Environment Setup
+
+The system requires API keys for various services. You can set these up in two ways:
+
+### Using the Setup Script
+
+We provide a setup script to help you configure your environment variables:
+
+```bash
+python setup_env.py
+```
+
+This script will:
+1. Check if python-dotenv is installed
+2. Create a `.env` file with placeholders for your API keys
+3. Prompt you to enter your API keys
+
+### Manual Setup
+
+Alternatively, you can create a `.env` file manually in the project root:
+
+```
+# Environment variables for Agentic RAG
+GROQ_API_KEY=your_groq_api_key_here
+OPENAI_API_KEY=your_openai_api_key_here
+SEARCH_API_KEY=your_search_api_key_here
+```
+
+### Required API Keys
+
+- **GROQ_API_KEY**: Required for the Groq LLM provider
+- **OPENAI_API_KEY**: Required if using OpenAI as the LLM provider
+- **SEARCH_API_KEY**: Required for external search services (optional if using mock search)
 
 ## Configuration
 
@@ -111,6 +146,26 @@ python api.py
 
 The API will be available at `http://localhost:8000`.
 
+### Adding PDF Files for Processing
+
+You can add PDF files to the data folder for processing by the system:
+
+```bash
+# Add a single PDF file
+python add_pdf.py /path/to/your/document.pdf
+
+# Add multiple PDF files
+python add_pdf.py /path/to/document1.pdf /path/to/document2.pdf
+
+# Add all PDF files from a directory
+python add_pdf.py /path/to/pdf/directory/
+
+# Specify a custom data folder
+python add_pdf.py --data-folder /custom/data/path /path/to/document.pdf
+```
+
+Once added, you can query the system about the content of these PDF files.
+
 ### Example Queries
 
 You can use the example script to test the system:
@@ -131,6 +186,14 @@ Example API request:
 curl -X POST http://localhost:8000/query \
   -H "Content-Type: application/json" \
   -d '{"text": "What are the latest developments in AI research?"}'
+```
+
+Example query about PDF content:
+
+```bash
+curl -X POST http://localhost:8000/query \
+  -H "Content-Type: application/json" \
+  -d '{"text": "What does the PDF document say about machine learning?"}'
 ```
 
 ## Extending the System

@@ -20,6 +20,7 @@ python-dotenv>=1.0.0
 
 # Document processing
 pypdf>=3.15.0
+PyPDF2>=3.0.0  # Added for PDF processing
 python-docx>=0.8.11
 openpyxl>=3.1.0
 

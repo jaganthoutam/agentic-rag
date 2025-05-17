@@ -8,6 +8,8 @@ import json
 import logging
 import time
 from typing import Dict, List, Optional, Tuple, Union
+import uuid
+from datetime import datetime
 
 import sqlalchemy
 from sqlalchemy import create_engine, Table, Column, String, Float, Integer, DateTime, Text, MetaData
@@ -142,7 +144,16 @@ class LongTermMemory(BaseMemory):
             
             # Extract memory entry data
             memory_id = memory_result.id
-            metadata = json.loads(memory_result.metadata) if memory_result.metadata else {}
+            if isinstance(memory_result.metadata, str):
+                try:
+                    metadata = json.loads(memory_result.metadata) if memory_result.metadata else {}
+                except Exception as e:
+                    self.logger.error(f"Error decoding memory entry metadata: {e}")
+                    metadata = {}
+            elif isinstance(memory_result.metadata, dict):
+                metadata = memory_result.metadata
+            else:
+                metadata = {}
             
             # Update access statistics
             self._update_memory_access(memory_id)
@@ -154,12 +165,15 @@ class LongTermMemory(BaseMemory):
                 self.logger.debug(f"No documents found for memory ID: {memory_id}")
                 return None
             
+            # Use the stored confidence score from metadata if available
+            confidence = metadata.get("confidence", memory_result.relevance_score)
+            
             return AgentResult(
                 agent_id="long_term_memory",
                 agent_type=AgentType.MEMORY,
                 query_id=query.id,
                 documents=documents,
-                confidence=highest_score,
+                confidence=confidence,  # Use the stored confidence
                 processing_time=0.1,
                 metadata={
                     "memory_id": memory_id,
@@ -187,47 +201,46 @@ class LongTermMemory(BaseMemory):
             self._store_query(query)
             
             # Store documents
+            document_ids = []
             for document in result.documents:
-                self._store_document(document)
+                doc_id = self._store_document(document)
+                if doc_id:
+                    document_ids.append(doc_id)
             
             # Create memory entry
-            memory_entry = MemoryEntry(
-                query_id=query.id,
-                document_ids=[doc.id for doc in result.documents],
-                relevance_score=result.confidence,
-                memory_type="long_term",
-                metadata={
-                    "agent_id": result.agent_id,
-                    "agent_type": result.agent_type.value,
-                    "original_metadata": result.metadata
-                }
-            )
+            memory_id = str(uuid.uuid4())
+            now = datetime.now()
             
             # Store memory entry
             stmt = self.memory_table.insert().values(
-                id=memory_entry.id,
-                query_id=memory_entry.query_id,
-                created_at=memory_entry.created_at,
-                accessed_at=memory_entry.accessed_at,
-                access_count=memory_entry.access_count,
-                relevance_score=memory_entry.relevance_score,
-                memory_type=memory_entry.memory_type,
-                metadata=json.dumps(memory_entry.metadata)
+                id=memory_id,
+                query_id=query.id,
+                created_at=now,
+                accessed_at=now,
+                access_count=1,
+                relevance_score=result.confidence,  # Store the confidence score
+                memory_type="long_term",
+                metadata=json.dumps({
+                    "agent_id": result.agent_id,
+                    "agent_type": result.agent_type.value,
+                    "processing_time": result.processing_time,
+                    "confidence": result.confidence,  # Store confidence explicitly in metadata
+                    "original_metadata": result.metadata
+                })
             )
             
             self.connection.execute(stmt)
             
-            # Store document associations
-            for document_id in memory_entry.document_ids:
+            # Create memory-document mappings
+            for doc_id in document_ids:
                 stmt = self.memory_document_table.insert().values(
-                    memory_id=memory_entry.id,
-                    document_id=document_id
+                    memory_id=memory_id,
+                    document_id=doc_id
                 )
-                
                 self.connection.execute(stmt)
             
-            self.logger.debug(f"Stored memory entry: {memory_entry.id} with {len(memory_entry.document_ids)} documents")
-        
+            self.logger.info(f"Stored memory entry: {memory_id} with {len(document_ids)} documents")
+            
         except Exception as e:
             self.logger.error(f"Error storing in long-term memory: {str(e)}")
     
@@ -410,12 +423,15 @@ class LongTermMemory(BaseMemory):
         
         self.connection.execute(stmt)
     
-    def _store_document(self, document: Document) -> None:
+    def _store_document(self, document: Document) -> str:
         """
         Store a document in the database.
         
         Args:
             document: The document to store
+            
+        Returns:
+            The ID of the stored document
         """
         # Check if the document already exists
         stmt = select(self.document_table).where(self.document_table.c.id == document.id)
@@ -423,7 +439,7 @@ class LongTermMemory(BaseMemory):
         
         if result:
             # Document already exists
-            return
+            return document.id
         
         # Insert the document
         stmt = self.document_table.insert().values(
@@ -435,6 +451,7 @@ class LongTermMemory(BaseMemory):
         )
         
         self.connection.execute(stmt)
+        return document.id
     
     def _update_memory_access(self, memory_id: str) -> None:
         """
@@ -482,7 +499,17 @@ class LongTermMemory(BaseMemory):
         
         documents = []
         for row in document_rows:
-            metadata = json.loads(row.metadata) if row.metadata else {}
+            # Fix: handle metadata as str or dict
+            if isinstance(row.metadata, str):
+                try:
+                    metadata = json.loads(row.metadata) if row.metadata else {}
+                except Exception as e:
+                    self.logger.error(f"Error decoding document metadata: {e}")
+                    metadata = {}
+            elif isinstance(row.metadata, dict):
+                metadata = row.metadata
+            else:
+                metadata = {}
             
             document = Document(
                 id=row.id,
@@ -491,7 +518,6 @@ class LongTermMemory(BaseMemory):
                 timestamp=row.timestamp,
                 metadata=metadata
             )
-            
             documents.append(document)
         
         return documents
@@ -521,40 +547,43 @@ class LongTermMemory(BaseMemory):
     
     def _find_similar_queries(self, query_text: str) -> List[Tuple[str, float]]:
         """
-        Find queries similar to the given text.
+        Find queries similar to the given query text.
         
         Args:
-            query_text: The query text to match
+            query_text: The query text to find similar queries for
             
         Returns:
-            A list of tuples (query_id, similarity_score) sorted by score
+            List of tuples (query_id, similarity_score)
         """
-        # In a production system, this would use proper vector embeddings
-        # and semantic search. For now, use a simple keyword matching approach.
-        query_keywords = set(query_text.lower().split())
-        
-        # Get all queries
-        stmt = select(self.query_table)
-        query_rows = self.connection.execute(stmt).fetchall()
-        
-        similarities = []
-        
-        for row in query_rows:
-            stored_text = row.text
-            stored_keywords = set(stored_text.lower().split())
+        try:
+            # Get all queries
+            stmt = select(self.query_table)
+            queries = self.connection.execute(stmt).fetchall()
             
-            # Calculate Jaccard similarity
-            intersection = len(query_keywords.intersection(stored_keywords))
-            union = len(query_keywords.union(stored_keywords))
+            if not queries:
+                return []
             
-            if union == 0:
-                similarity = 0.0
-            else:
-                similarity = intersection / union
+            # Calculate similarity scores
+            # In a real implementation, we would use proper vector embeddings
+            # For now, use a simple keyword-based approach
+            query_keywords = set(query_text.lower().split())
+            similar_queries = []
             
-            similarities.append((row.id, similarity))
+            for query in queries:
+                stored_query_text = query.text.lower()
+                stored_keywords = set(stored_query_text.split())
+                
+                # Calculate Jaccard similarity
+                common_keywords = query_keywords.intersection(stored_keywords)
+                if common_keywords:
+                    similarity = len(common_keywords) / len(query_keywords.union(stored_keywords))
+                    similar_queries.append((query.id, similarity))
+            
+            # Sort by similarity in descending order
+            similar_queries.sort(key=lambda x: x[1], reverse=True)
+            
+            return similar_queries
         
-        # Sort by similarity score in descending order
-        similarities.sort(key=lambda x: x[1], reverse=True)
-        
-        return similarities
+        except Exception as e:
+            self.logger.error(f"Error finding similar queries: {str(e)}")
+            return []

@@ -347,24 +347,112 @@ class LocalDataAgent(BaseAgent):
         self.logger.debug(f"Processing PDF file: {file_path}")
         
         try:
-            # In a real implementation, we would use a PDF parsing library
-            # For now, just create a placeholder document
+            # Import PDF processing libraries
+            try:
+                import PyPDF2
+                from PyPDF2 import PdfReader
+            except ImportError:
+                self.logger.error("PyPDF2 not installed. Install with: pip install PyPDF2")
+                return []
             
-            document = Document(
-                content=f"PDF File: {os.path.basename(file_path)}\n\n"
-                        f"This is a placeholder for PDF content. In a real implementation, "
-                        f"we would extract text from the PDF and analyze it.",
-                source=file_path,
-                metadata={
-                    "file_type": "pdf",
-                    "file_name": os.path.basename(file_path),
-                    "file_size": os.path.getsize(file_path),
-                    "relevance": 0.7  # Placeholder
-                }
-            )
-            
-            return [document]
+            # Open and read the PDF
+            with open(file_path, 'rb') as file:
+                pdf_reader = PdfReader(file)
+                
+                # Extract text from all pages
+                full_text = ""
+                for page_num in range(len(pdf_reader.pages)):
+                    page = pdf_reader.pages[page_num]
+                    full_text += page.extract_text() + "\n\n"
+                
+                # If no text was extracted, the PDF might be scanned or image-based
+                if not full_text.strip():
+                    self.logger.warning(f"No text could be extracted from PDF: {file_path}")
+                    return []
+                
+                # Split text into chunks for better processing
+                # In a real implementation, we would use more sophisticated chunking
+                chunks = self._chunk_text(full_text, max_chunk_size=1000)
+                
+                # Find relevant chunks based on the query
+                relevant_chunks = []
+                for chunk in chunks:
+                    # Calculate relevance based on keyword overlap
+                    chunk_keywords = set(chunk.lower().split())
+                    query_keywords = set(query_text.lower().split())
+                    common_keywords = chunk_keywords.intersection(query_keywords)
+                    
+                    if common_keywords:
+                        # Calculate Jaccard similarity
+                        similarity = len(common_keywords) / len(query_keywords.union(chunk_keywords))
+                        if similarity >= 0.1:  # Threshold to exclude very low relevance
+                            relevant_chunks.append((chunk, similarity))
+                
+                # Sort by relevance
+                relevant_chunks.sort(key=lambda x: x[1], reverse=True)
+                
+                # Create documents from relevant chunks
+                documents = []
+                for chunk, relevance in relevant_chunks[:5]:  # Limit to top 5 chunks
+                    document = Document(
+                        content=chunk,
+                        source=f"{file_path} (relevance: {relevance:.2f})",
+                        metadata={
+                            "file_type": "pdf",
+                            "file_name": os.path.basename(file_path),
+                            "file_size": os.path.getsize(file_path),
+                            "relevance": relevance,
+                            "page_count": len(pdf_reader.pages)
+                        }
+                    )
+                    documents.append(document)
+                
+                # If no relevant chunks were found, return the first chunk as a fallback
+                if not documents and chunks:
+                    document = Document(
+                        content=chunks[0],
+                        source=f"{file_path} (first chunk)",
+                        metadata={
+                            "file_type": "pdf",
+                            "file_name": os.path.basename(file_path),
+                            "file_size": os.path.getsize(file_path),
+                            "relevance": 0.5,  # Default relevance
+                            "page_count": len(pdf_reader.pages)
+                        }
+                    )
+                    documents.append(document)
+                
+                return documents
         
         except Exception as e:
             self.logger.error(f"Error processing PDF file {file_path}: {str(e)}")
             return []
+    
+    def _chunk_text(self, text: str, max_chunk_size: int = 1000) -> List[str]:
+        """
+        Split text into chunks of approximately equal size.
+        
+        Args:
+            text: The text to split
+            max_chunk_size: Maximum size of each chunk
+            
+        Returns:
+            List of text chunks
+        """
+        # Simple chunking by paragraphs
+        paragraphs = text.split('\n\n')
+        chunks = []
+        current_chunk = ""
+        
+        for paragraph in paragraphs:
+            if len(current_chunk) + len(paragraph) <= max_chunk_size:
+                current_chunk += paragraph + "\n\n"
+            else:
+                if current_chunk:
+                    chunks.append(current_chunk.strip())
+                current_chunk = paragraph + "\n\n"
+        
+        if current_chunk:
+            chunks.append(current_chunk.strip())
+        
+        return chunks

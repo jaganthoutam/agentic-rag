@@ -293,7 +293,7 @@ async def configure_system(config: Dict[str, Any]):
         raise HTTPException(status_code=500, detail=f"Error updating configuration: {str(e)}")
 
 
-def run_server(host: str = "0.0.0.0", port: int = 8000):
+def run_server(host: str = "0.0.0.0", port: int = 8001):
     """
     Run the API server.
     
@@ -316,7 +316,7 @@ if __name__ == "__main__":
     # Parse command line arguments
     parser = argparse.ArgumentParser(description="Agentic RAG API Server")
     parser.add_argument("--host", default="0.0.0.0", help="Host to bind to")
-    parser.add_argument("--port", type=int, default=8000, help="Port to listen on")
+    parser.add_argument("--port", type=int, default=8001, help="Port to listen on")
     parser.add_argument("--config", default="config.json", help="Path to configuration file")
     
     args = parser.parse_args()

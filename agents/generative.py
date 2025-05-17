@@ -9,6 +9,7 @@ import time
 import uuid
 import logging
 import requests
+import os
 from typing import Dict, List, Optional, Union, Any, Literal
 
 from core import AgentType, Query, Document, AgentResult
@@ -24,7 +25,7 @@ class GenerativeAgent(BaseAgent):
     
     def __init__(
         self, 
-        provider: Literal["openai", "groq"] = "groq",
+        provider: Literal["openai", "groq", "ollama"] = "ollama",
         model: str = "llama3-70b-8192", 
         api_key: str = "", 
         max_tokens: int = 4000,
@@ -34,7 +35,7 @@ class GenerativeAgent(BaseAgent):
         Initialize the generative agent.
         
         Args:
-            provider: The LLM provider ("openai" or "groq")
+            provider: The LLM provider ("openai", "groq", or "mock")
             model: Name of the language model to use
             api_key: API key for the language model service
             max_tokens: Maximum number of tokens in generated responses
@@ -43,13 +44,31 @@ class GenerativeAgent(BaseAgent):
         super().__init__(agent_type=AgentType.GENERATIVE)
         self.provider = provider
         self.model = model
-        self.api_key = api_key
+        
+        # Get API key from parameter or environment variable
+        if provider == "groq":
+            self.api_key = api_key or os.environ.get("GROQ_API_KEY", "")
+            if not self.api_key:
+                self.logger.warning("GROQ_API_KEY not found in environment variables")
+        elif provider == "openai":
+            self.api_key = api_key or os.environ.get("OPENAI_API_KEY", "")
+            if not self.api_key:
+                self.logger.warning("OPENAI_API_KEY not found in environment variables")
+        else:
+            self.api_key = api_key
+            
         self.max_tokens = max_tokens
         self.temperature = temperature
         self.logger.info(
             f"Generative agent initialized with provider={provider}, model={model}, "
             f"max_tokens={max_tokens}, temperature={temperature}"
         )
+        
+        # Log if API key is set (without exposing the key)
+        if self.api_key and provider != "mock":
+            self.logger.info(f"API key for {provider} is set")
+        elif provider != "mock":
+            self.logger.warning(f"No API key provided for {provider}")
     
     @BaseAgent.measure_execution_time
     def process(self, query: Query) -> AgentResult:
@@ -231,6 +250,8 @@ class GenerativeAgent(BaseAgent):
                 return self._call_openai_api(system_prompt, query_text, context_str)
             elif self.provider == "groq":
                 return self._call_groq_api(system_prompt, query_text, context_str)
+            elif self.provider == "mock":
+                return self._generate_mock_response(query_text, context_str != "")
             else:
                 raise ValueError(f"Unsupported provider: {self.provider}")
             
@@ -330,6 +351,8 @@ class GenerativeAgent(BaseAgent):
             return self._generate_mock_response(query_text, context_str != "")
         except Exception as e:
             self.logger.error(f"Error calling Groq API: {str(e)}")
+            if "401" in str(e):
+                self.logger.error("Authentication error: Check if your GROQ_API_KEY is valid")
             return self._generate_mock_response(query_text, context_str != "")
     
     def _call_api_directly(self, provider: str, model: str, messages: List[Dict[str, str]]) -> str:
